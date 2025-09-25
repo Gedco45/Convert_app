@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>File Converter</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background-color: #f5f6fa;
+    }
+    .container {
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 400px;
+      width: 90%;
+    }
+    h2 {
+      margin-bottom: 1rem;
+    }
+    #dropZone {
+      border: 2px dashed #007bff;
+      border-radius: 10px;
+      padding: 2rem;
+      background: #f9f9f9;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #dropZone.dragover {
+      background: #e6f0ff;
+    }
+    input[type="file"] {
+      display: none;
+    }
+    #dropZone.file-added {
+      background: #2671e2;
+      border-color: #11366d;
+      color: #ffffff
+    }
+
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #loading {
+      display: none;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: #555;
+    }
+    #success {
+      display: none;
+      margin-top: 1rem;
+      color: green;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>Convert Shapefile/GeoJSON/Raster → GeoPackage</h2>
+
+    <div id="dropZone">Drag & Drop File Here or Click to Select</div>
+    <form id="uploadForm">
+      <input type="file" name="file" id="fileInput" />
+      <button type="submit">Upload & Convert</button>
+    </form>
+
+    <div id="loading">⏳ Converting, please wait...</div>
+    <div id="success">✅ Conversion complete! Your download has started.</div>
+  </div>
+
+  <script>
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const form = document.getElementById("uploadForm");
+    const loading = document.getElementById("loading");
+    const success = document.getElementById("success");
+
+    // Allow clicking dropzone to open file picker
+    dropZone.addEventListener("click", () => fileInput.click());
+
+    // Drag & drop functionality
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.classList.add("dragover");
+});
+dropZone.addEventListener("dragleave", () => {
+  dropZone.classList.remove("dragover");
+});
+dropZone.addEventListener("drop", (e) => {
+  e.preventDefault();
+  dropZone.classList.remove("dragover");
+  fileInput.files = e.dataTransfer.files;
+
+  // NEW: Change state when file is dropped (this must be INSIDE the drop handler)
+  if (fileInput.files.length) {
+    dropZone.classList.add("file-added");
+    dropZone.textContent = `✅ ${fileInput.files[0].name} ready`;
+  }
+});
+
+    // NEW: Change state when file is picked via input
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) {
+        dropZone.classList.add("file-added");
+        dropZone.textContent = `✅ ${fileInput.files[0].name} ready`;
+      }
+    });
+
+    // Handle form submit
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!fileInput.files.length) return alert("Please select a file first!");
+
+      loading.style.display = "block";
+      success.style.display = "none";
+
+      const formData = new FormData(form);
+      const response = await fetch("/convert", { method: "POST", body: formData });
+      const blob = await response.blob();
+
+      loading.style.display = "none";
+      success.style.display = "block";
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "output.gpkg";
+      a.click();
+    });
+  </script>
+</body>
+</html>
